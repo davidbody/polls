@@ -11,7 +11,7 @@ library(curl)
 library(shinystan)
 library(rmarkdown)
 
-setwd("~/GitHub/polls")
+setwd("~/work/data/polls")
 
 ####################
 # Useful functions #

@@ -12,7 +12,7 @@ library(DT)
 library(reshape2)
 
 rm(list = ls())
-setwd("~/GitHub/polls")
+setwd("~/work/data/polls")
 load("out.RData")
 
 logit <- function(p) log(p/(1-p))

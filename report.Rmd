@@ -8,7 +8,7 @@ output:
 ---
 
 ```{r echo=FALSE, message=FALSE}
-setwd("~/GitHub/polls")
+setwd("~/work/data/polls")
 knitr::read_chunk('graphs.R')
 ```
 
