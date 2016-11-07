@@ -18,7 +18,7 @@ setwd("~/work/data/polls")
 ####################
 
 corr_matrix <- function(m){
-	(diag(m)^-.5 * diag(nrow = nrow(m))) %*% m %*% (diag(m)^-.5 * diag(nrow = nrow(m))) 
+    (diag(m)^-.5 * diag(nrow = nrow(m))) %*% m %*% (diag(m)^-.5 * diag(nrow = nrow(m))) 
 }
 
 cov_matrix <- function(n, sigma2, rho){
@@ -94,8 +94,8 @@ df <- all_polls %>%
            entry_date = entry.date.time..et. %>% substr(1,10) %>% as.Date) %>%
     filter(t >= start_date & !is.na(t)
            & (vtype == "Likely Voters" | 
-               vtype == "Registered Voters" | 
-               vtype == "Adults") # This is to get rid of rows showing disaggregated polls by party ID.
+                  vtype == "Registered Voters" | 
+                  vtype == "Adults") # This is to get rid of rows showing disaggregated polls by party ID.
            & pop > 1) %>%
     mutate(pollster = str_extract(pollster, pattern = "[A-z0-9 ]+") %>% sub("\\s+$", "", .),
            pollster = replace(pollster, pollster == "Fox News", "FOX"), # Fixing inconsistencies in pollster names
@@ -103,8 +103,8 @@ df <- all_polls %>%
            pollster = replace(pollster, pollster == "ABC News", "ABC"),
            undecided = ifelse(is.na(undecided), 0, undecided),
            other = ifelse(is.na(other), 0, other) + 
-                   ifelse(is.na(johnson), 0, johnson) + 
-                   ifelse(is.na(mcmullin), 0, mcmullin),
+               ifelse(is.na(johnson), 0, johnson) + 
+               ifelse(is.na(mcmullin), 0, mcmullin),
            sum = clinton + trump,
            week = floor_date(t, unit = "week"),
            day_of_week = as.integer(format(t, format = "%w")),
@@ -188,12 +188,12 @@ all_t_until_election <- min(all_t) + days(0:(election_day - min(all_t)))
 
 states2012 <- read.csv("2012.csv", 
                        header = TRUE, stringsAsFactors = FALSE) %>% 
-                mutate(score = obama_count / (obama_count + romney_count),
-                       national_score = sum(obama_count)/sum(obama_count + romney_count),
-                       diff_score = score - national_score,
-                       share_national_vote = (total_count*(1+adult_pop_growth_2011_15))
-                                            /sum(total_count*(1+adult_pop_growth_2011_15))) %>%
-                arrange(state)
+    mutate(score = obama_count / (obama_count + romney_count),
+           national_score = sum(obama_count)/sum(obama_count + romney_count),
+           diff_score = score - national_score,
+           share_national_vote = (total_count*(1+adult_pop_growth_2011_15))
+           /sum(total_count*(1+adult_pop_growth_2011_15))) %>%
+    arrange(state)
 rownames(states2012) <- states2012$state
 
 prior_diff_score <- states2012[all_polled_states[-1],]$diff_score
@@ -223,10 +223,11 @@ unique_ts <- unique(df$index_t[df$state == "--"])
 natpolls_indices <- data.frame(unique_ts = unique_ts,
                                unique_ws = sapply(unique_ts, function(i) unique(df$index_w[df$index_t == i])))
 
+
 df$index_t_unique <- sapply(1:nrow(df), 
-                              function(i) ifelse(df$state[i] == "--", 
-                                                 which(natpolls_indices$unique_ts == df$index_t[i]), 
-                                                 0))
+                            function(i) ifelse(df$state[i] == "--", 
+                                               which(natpolls_indices$unique_ts == df$index_t[i]), 
+                                               0))
 
 ###################
 # Creating priors #
@@ -242,7 +243,7 @@ mu_b_prior <- logit(0.486 + c("--" = 0, prior_diff_score))
 
 score_among_polled <- sum(states2012[all_polled_states[-1],]$obama_count)/
     sum(states2012[all_polled_states[-1],]$obama_count + 
-        states2012[all_polled_states[-1],]$romney_count)
+            states2012[all_polled_states[-1],]$romney_count)
 alpha_prior <- log(states2012$national_score[1]/score_among_polled)
 
 sigma_mu_b_end <-cov_matrix(n = length(mu_b_prior) - 1, sigma2 = 1/20, rho = 0.5)
@@ -257,32 +258,32 @@ sigma_poll_error <- cov_matrix(length(mu_b_prior) - 1, 0.04^2, .7) # about 1% sd
 ##################################################
 
 out <- stan("state and national polls.stan", 
-     data = list(N = nrow(df),                  # Number of polls
-                 S = max(df$index_s),           # Number of states
-                 T = length(all_t_until_election),           # Number of days
-                 W = length(all_weeks_until_election),           # Number of weeks
-                 P = max(df$index_p),           # Number of pollsters
-                 last_poll_T = length(all_t),
-                 last_poll_W = length(all_weeks),
-                 T_unique = max(df$index_t_unique), 
-                 t_unique = df$index_t_unique,
-                 unique_ts = natpolls_indices$unique_ts,
-                 unique_ws = natpolls_indices$unique_ws,
-                 s = df$index_s,
-                 t = df$index_t,
-                 w = df$index_w,
-                 p = df$index_p,
-                 n_clinton = df$n_clinton,
-                 n_respondents = df$n_respondents,
-                 state_weights = state_weights,
-                 alpha_prior = alpha_prior,
-                 mu_b_prior =  mu_b_prior,
-                 sigma_mu_b_end = sigma_mu_b_end,
-                 sigma_walk_b_forecast = sigma_walk_b_forecast,
-                 sigma_poll_error = sigma_poll_error,
-                 week = as.integer(as.factor(floor_date(all_t, unit="week"))),
-                 day_of_week = as.numeric(format(all_t, format = "%w"))),
-     chains = 4, iter = 2000)
+            data = list(N = nrow(df),                  # Number of polls
+                        S = max(df$index_s),           # Number of states
+                        T = length(all_t_until_election),           # Number of days
+                        W = length(all_weeks_until_election),           # Number of weeks
+                        P = max(df$index_p),           # Number of pollsters
+                        last_poll_T = length(all_t),
+                        last_poll_W = length(all_weeks),
+                        T_unique = max(df$index_t_unique), 
+                        t_unique = df$index_t_unique,
+                        unique_ts = natpolls_indices$unique_ts,
+                        unique_ws = natpolls_indices$unique_ws,
+                        s = df$index_s,
+                        t = df$index_t,
+                        w = df$index_w,
+                        p = df$index_p,
+                        n_clinton = df$n_clinton,
+                        n_respondents = df$n_respondents,
+                        state_weights = state_weights,
+                        alpha_prior = alpha_prior,
+                        mu_b_prior =  mu_b_prior,
+                        sigma_mu_b_end = sigma_mu_b_end,
+                        sigma_walk_b_forecast = sigma_walk_b_forecast,
+                        sigma_poll_error = sigma_poll_error,
+                        week = as.integer(as.factor(floor_date(all_t, unit="week"))),
+                        day_of_week = as.numeric(format(all_t, format = "%w"))),
+            chains = 4, iter = 2000)
 
 stan_summary <- capture.output(print(out, pars = c("alpha", "sigma_c", 
                                                    "sigma_u_state", "sigma_u_national",
@@ -308,12 +309,16 @@ sigma_u_state <- rstan::extract(out, pars = "sigma_u_state")[[1]]
 sigma_u_national <- rstan::extract(out, pars = "sigma_u_national")[[1]]
 poll_error <- rstan::extract(out, pars = "poll_error")[[1]]
 
-dates <- sort(c(all_t, unique(setdiff(all_weeks_until_election, all_weeks))))
-dates <- c(dates[-length(dates)], election_day) # For convenience: the last date will be named Nov 8 (not Nov 6, when the week begins).
+dates <- sort(c(all_t[all_t <= all_weeks[length(all_weeks)]], 
+                unique(setdiff(all_weeks_until_election + days(3), all_weeks + days(3)))))
+dates <- c(dates[-length(dates)], election_day)
+# dates = all dates until last Sunday; followed by:       # for mu_a daily + interpolated mu_b weekly components
+#         all Wednesdays until election day; followed by" # because mu_b weekly components are centered on Wednesdays
+#         election day (for convenience - should be Wednesday, but it shouldn't make much difference).
 dimnames(p) <- list(1:nrow(p), as.character(dates), all_polled_states)
 dimnames(mu_a) <- list(1:nrow(mu_a), as.character(all_t))
 dimnames(mu_b) <- list(1:dim(mu_b)[1],
-                       as.character(all_weeks_until_election),
+                       as.character(all_weeks_until_election + days(3)),
                        all_polled_states)
 dimnames(mu_c) <- list(1:nrow(mu_c), all_pollsters)
 
@@ -327,19 +332,47 @@ pred <- data.frame(t = rep(dates, length(all_polled_states)),
                    low =  apply(p, c(2,3), function(x) quantile(x, .05))  %>% as.vector,
                    clinton_win = apply(p, c(2,3), function(x) mean(x > .5))  %>% as.vector)
 
-cov_logit_p <- lapply(as.character(all_t), function(t) cov(logit(p[,t,-1])))
-names(cov_logit_p) <- as.character(all_t)
+# graphs.R will need indexes for last poll day. But the value is not computed by Stan
+# in the generated quantities block in Stan.
+# Solution: recovering values for pred[pred$t == all_t[length(all_t)],] by interpolation
 
-# logit_forecast <- logit(pred$p[pred$t == election_day & pred$state != "--"])
-# names(logit_forecast) <- pred$state[pred$t == election_day & pred$state != "--"]
+now <- all_t[length(all_t)]
+before <- dates[max(which(dates <= now))]
+after  <- dates[min(which(dates >= now))]
+days_before <- days(now-before)@day
+days_after <-days(after-now)@day
+w_before <- days_after/(days_before + days_after)
+w_after <-  days_before/(days_before + days_after)
+w <- data.frame(w = c(w_before, w_after), t = c(before, after))
+
+interpolated_rows <- pred %>% filter(t == before | t == after) %>% 
+    left_join(w, by = "t") %>% 
+    group_by(state) %>%
+    summarize(p = weighted.mean(p, w), 
+              p_sd = weighted.mean(p_sd, w), 
+              high = weighted.mean(high, w), 
+              low = weighted.mean(low, w), 
+              clinton_win = weighted.mean(clinton_win, w)) %>% 
+    mutate(t = now) 
+
+pred <- bind_rows(pred, interpolated_rows)
+
+
+# cov_logit_p <- lapply(as.character(all_t), function(t) cov(logit(p[,t,-1])))
+# names(cov_logit_p) <- as.character(all_t)
+
+# median_logit_forecast <- logit(pred$p[pred$t == election_day & pred$state != "--"])
+# names(median_logit_forecast) <- pred$state[pred$t == election_day & pred$state != "--"]
 # cov_logit_forecast <- cov(logit(p[,as.character(election_day),-1]))
 # cov_forecast <- cov(p[,as.character(election_day),-1])
+
+sim_forecast <- p[,as.character(election_day),-1]
 
 #################################################
 # Predicted electoral votes for each simulation #
 #################################################
 
-sim_win <- p[, as.character(election_day),-1] > 0.5
+sim_win <- sim_forecast > 0.5
 
 all_non_polled_states <- setdiff(all_states, all_polled_states[-1])
 non_polled_win        <- states2012[all_non_polled_states,]$score > .5
@@ -392,7 +425,9 @@ p_subset <- p[sample(1:nrow(p), 100, replace = FALSE),,]
 # Info on last polls #
 ######################
 
+# Recording date/time of last model update and recording time zone.
 time_lastrun <- Sys.time()
+attributes(time_lastrun)$tzone <- Sys.timezone()
 
 last_polls <- df %>% 
     arrange(desc(entry_date)) %>% 
@@ -402,6 +437,7 @@ last_polls <- df %>%
            N=n_respondents) %>% 
     select(entry_date, pollster, state, p_clinton, p_trump, N)
 
+save(list = c("sim_forecast", "ev_state"), file = "last_sim.RData")
 
 rm(out)
 rm(p)

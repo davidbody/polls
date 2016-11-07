@@ -10,6 +10,7 @@ library(knitr)
 library(mvtnorm)
 library(DT)
 library(reshape2)
+library(ggrepel)
 
 rm(list = ls())
 setwd("~/work/data/polls")
@@ -67,18 +68,18 @@ plot_score <- function(state_abbr_vec, show_sim = FALSE, from = start_date){
         geom_vline(xintercept = as.numeric(election_day)) +
         geom_point(data = df[df$state %in% state_abbr_vec & df$t >= from,],
                    aes(x = t, y = 100*p_clinton, alpha = -sqrt(p_clinton*(1-p_clinton)/n_respondents)),
-                   size = 1/min(2, 2+length(state_abbr_vec)))  + 
+                   size = 1/min(2, 2+length(state_abbr_vec)))  +
         scale_alpha(range = c(.1, 1)) +
-        geom_line(data = pred[pred$state %in% state_abbr_vec & pred$t <= max(all_t) & pred$t >= from,], 
-                  aes(x = t, y = 100*p), color = "white", size = ifelse(length(state_abbr_vec) <= 2, 1, .8)) +
-        geom_line(data = pred[pred$state %in% state_abbr_vec & pred$t <= max(all_t) & pred$t >= from,], 
-                  aes(x = t, y = 100*p), color = "darkblue", size = ifelse(length(state_abbr_vec) <= 2, .8, .6)) +
         geom_line(data = pred[pred$state %in% state_abbr_vec & pred$t >= max(all_t) & pred$t >= from,], 
                   aes(x = t, y = 100*p), color = "white", linetype = "solid", 
                   size = ifelse(length(state_abbr_vec) <= 2, .8, .6), alpha = .5) +
         geom_line(data = pred[pred$state %in% state_abbr_vec & pred$t >= max(all_t) & pred$t >= from,], 
                   aes(x = t, y = 100*p), color = "darkblue", linetype = "11", 
                   size = ifelse(length(state_abbr_vec) <= 2, .8, .6)) +
+        geom_line(data = pred[pred$state %in% state_abbr_vec & pred$t <= max(all_t) & pred$t >= from,], 
+                  aes(x = t, y = 100*p), color = "white", size = ifelse(length(state_abbr_vec) <= 2, 1, .8)) +
+        geom_line(data = pred[pred$state %in% state_abbr_vec & pred$t <= max(all_t) & pred$t >= from,], 
+                  aes(x = t, y = 100*p), color = "darkblue", size = ifelse(length(state_abbr_vec) <= 2, .8, .6)) +
         guides(color = FALSE, alpha = FALSE, linetype = FALSE) + 
         # scale_linetype_discrete(guide=FALSE) +
         facet_wrap(~ state_pos, ncol = ncolumns, labeller = as_labeller(state_labels, multi_line = TRUE)) +
@@ -162,7 +163,9 @@ dp %>% arrange(house_effect_P50) %>% filter(house_effect_P50 <= -1) %>% head(., 
 
 # @knitr alpha
 
-ggplot(data.frame(alpha = 100*(inv_logit(alpha + logit(pred$p[pred$state == "--" & pred$t == all_t[length(all_t)]]))-pred$p[pred$state == "--" & pred$t == all_t[length(all_t)]]) )) + 
+ggplot(data.frame(alpha = 100*(inv_logit(alpha + 
+                                         logit(pred$p[pred$state == "--" & pred$t == all_t[length(all_t)]]))-
+                                               pred$p[pred$state == "--" & pred$t == all_t[length(all_t)]]) )) + 
     geom_histogram(aes(x = alpha), bins = 50, fill = "grey", color = "darkgrey") + 
     xlab("Estimated National/States Discrepancy of Clinton Scores (in % Points)") +
     ylab("Number of simulations")
@@ -189,9 +192,9 @@ ggplot() +
              map = states_map, aes(x=long, y=lat, map_id = region)) +
     geom_map(data = pr_all_states, 
              map = states_map, aes(fill= p, map_id = tolower(state_name))) +
-    scale_fill_gradient2(low = "red3", mid = "white", high = "royalblue", midpoint = 50) + 
+    scale_fill_gradient2("Pr(Clinton\nwins)", low = "red3", mid = "white", high = "royalblue", midpoint = 50) + 
     theme(panel.border = element_blank(), panel.background = element_blank(), axis.ticks = element_blank(),
-          axis.text = element_blank(), legend.title=element_blank()) + 
+          axis.text = element_blank(), legend.position="bottom") + 
     coord_map("albers", lat0 = 39, lat1 = 45) +
     labs(x = NULL, y = NULL) 
 
@@ -239,7 +242,8 @@ colnames(m0) <- all_polled_states[-1]
 
 ## @knitr table_predictions
 
-table_pred <- data.frame(pred[pred$t == all_t[length(all_t)], c("state","p")], pred[pred$t == election_day, c("p", "clinton_win")])
+table_pred <- data.frame(pred[pred$t == all_t[length(all_t)], c("state","p")], 
+                         pred[pred$t == election_day, c("p", "clinton_win")])
 colnames(table_pred) <- c("state", "p_now", "p_forecast", "clinton_win")
 table_pred[,2:3] <- round(table_pred[,2:3], 3)
 table_pred[,4] <- round(table_pred[,4],2)
@@ -248,22 +252,19 @@ table_pred$state_name <- state_name[as.character(table_pred$state)]
 table_pred$state_name[is.na(table_pred$state_name)] <- "*National Vote*"
 rownames(table_pred) <- NULL
 colors_red_to_blue <- colorRampPalette(c("#FF6666", "white","#6E90F8"))
-table_pred <- table_pred %>% 
-    left_join(df %>% group_by(state) %>% 
-                  summarize(number_polls = n()) %>% 
+table_pred <- table_pred %>%
+    left_join(df %>% group_by(state) %>%
+                  summarize(number_polls = n()) %>%
                   ungroup()) %>%
     arrange(state_name)
 table_pred$prior <- inv_logit(mu_b_prior)[table_pred$state]
 table_pred$diffprior_now <-table_pred$p_now - table_pred$prior
 
-# kable(table_pred[,c(5,2:4)], col.names = c("State", "Current Score", "Forecast Score", "Pr(Clinton Wins)"))
-# Note: kable will not highlight rows/cells; using datatable (DT package) instead.
-
-datatable(table_pred[,c("state_name", "number_polls", "prior", "diffprior_now", "p_now", "p_forecast", "clinton_win")], 
+datatable(table_pred[,c("state_name", "number_polls", "prior", "diffprior_now", "p_now", "p_forecast", "clinton_win")],
           colnames = c("State", "Number of Polls", "Prior", "Current - Prior Difference", "Current Score", "Forecast Score", "Pr(Clinton Wins)"),
           rownames = FALSE,
-          options = list(dom = c('f t'), pageLength = nrow(table_pred))) %>% 
-    formatStyle('clinton_win', 
+          options = list(dom = c('f t'), pageLength = nrow(table_pred))) %>%
+    formatStyle('clinton_win',
                 backgroundColor=styleInterval(seq(.01,.99,.01), colors_red_to_blue(100))) %>%
     formatPercentage('clinton_win', 0) %>%
     formatPercentage(c('prior', 'diffprior_now', 'p_now', 'p_forecast'), 1)
@@ -382,3 +383,5 @@ ggplot(data = plot_data[plot_data$date >= Sys.Date(),])  +
               aes(x = as.Date(date), y = clinton, label = state), 
               size = 2.5, hjust = "left", nudge_x = 1, check_overlap = TRUE) + 
     xlim(c(as.Date(remaining_days[1], origin = "1970-01-01"), as.Date("2016-11-21", origin = "1970-01-01")))
+
+
