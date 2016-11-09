@@ -71,13 +71,13 @@ download_csv <- function(stub){
 }
 
 # Download the data and put everything in a single df
-all_polls <- map_df(stubs, download_csv, .id = "state")
+# all_polls <- map_df(stubs, download_csv, .id = "state")
 
-colnames(all_polls) <- colnames(all_polls) %>% tolower
+# colnames(all_polls) <- colnames(all_polls) %>% tolower
 
-system("cp all_polls.csv all_polls-old.csv")
-write.csv(all_polls, "all_polls.csv")
-# all_polls <- read.csv("all_polls.csv", stringsAsFactors = FALSE, header = TRUE)
+# system("cp all_polls.csv all_polls-old.csv")
+# write.csv(all_polls, "all_polls.csv")
+all_polls <- read.csv("all_polls.csv", stringsAsFactors = FALSE, header = TRUE)
 
 ############################################################
 # Cleaning up downloaded polling data / creating variables #
